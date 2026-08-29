@@ -1,4 +1,4 @@
-import joblib
+ import pickle
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -9,15 +9,18 @@ st.set_page_config(
 
 st.title("🎓 Student Math Score Predictor")
 st.write(
-    "Student information enter karke unka predicted math score calculate karein."
+    "Student details enter karke unka predicted math score calculate karein."
 )
 
 
 @st.cache_resource
 def load_artifacts():
-    model = joblib.load("best_student_model.pkl")
-    scaler = joblib.load("scaler.pkl")
-    feature_cols = joblib.load("feature_columns.pkl")
+    with open("best_student_model.pkl", "rb") as f:
+        model = pickle.load(f)
+    with open("scaler.pkl", "rb") as f:
+        scaler = pickle.load(f)
+    with open("feature_columns.pkl", "rb") as f:
+        feature_cols = pickle.load(f)
     return model, scaler, feature_cols
 
 
@@ -63,11 +66,10 @@ if st.button("Predict Score 🚀"):
     df_input = pd.DataFrame([input_dict])
     df_encoded = pd.get_dummies(df_input)
 
-    for col in feature_cols:
-        if col not in df_encoded.columns:
-            df_encoded[col] = 0
+    # Reindex input to match training features columns
+    df_encoded = df_encoded.reindex(columns=feature_cols, fill_value=0)
 
-    df_encoded = df_encoded[feature_cols]
+    # Scale and Predict
     scaled_input = scaler.transform(df_encoded)
     prediction = model.predict(scaled_input)[0]
     prediction = float(np.clip(prediction, 0, 100))
